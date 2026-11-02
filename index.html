@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
@@ -15,7 +16,24 @@
   <script type="text/babel">
     const { useEffect, useMemo, useState } = React;
 
-    // Ícones SVG embutidos (sem dependência externa)
+    /* ========================================================================
+     *  CONFIGURAÇÃO DO SUPABASE  ->  preencha os dois valores abaixo
+     *  Supabase > Project Settings > API
+     *   - Project URL:  https://xxxxxxxx.supabase.co
+     *   - anon public key (a chave "anon", NUNCA a "service_role")
+     * ====================================================================== */
+    const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
+    const SUPABASE_ANON_KEY = "SUA-CHAVE-ANON-AQUI";
+
+    const SUPABASE_OK =
+      SUPABASE_URL.startsWith("https://") &&
+      !SUPABASE_URL.includes("SEU-PROJETO") &&
+      !SUPABASE_ANON_KEY.includes("SUA-CHAVE");
+    const sb = SUPABASE_OK
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+
+    /* --------------------------- Ícones (Lucide, embutidos) --------------------------- */
     const ICON_PATHS = {
       Search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
       MapPin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
@@ -33,6 +51,16 @@
       Music: <><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>,
       Tent: <><path d="M3.5 21 14 3" /><path d="M20.5 21 10 3" /><path d="M15.5 21 12 15l-3.5 6" /><path d="M2 21h20" /></>,
       ShoppingBasket: <><path d="m15 11-1 9" /><path d="m19 11-4-7" /><path d="M2 11h20" /><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" /><path d="M4.5 15.5h15" /><path d="m5 11 4-7" /><path d="m9 11 1 9" /></>,
+      Instagram: <><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><path d="M17.5 6.5h.01" /></>,
+      Loader: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
+      CheckCircle: <><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></>,
+      AlertCircle: <><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></>,
+      LogIn: <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="m10 17 5-5-5-5" /><path d="M15 12H3" /></>,
+      LogOut: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>,
+      User: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+      Mail: <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></>,
+      Lock: <><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
+      Image: <><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></>,
     };
     const makeIcon = (name) => ({ className }) => (
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
@@ -46,660 +74,1059 @@
       Store = makeIcon("Store"), Utensils = makeIcon("Utensils"), HeartPulse = makeIcon("HeartPulse"),
       Wrench = makeIcon("Wrench"), BedDouble = makeIcon("BedDouble"), Briefcase = makeIcon("Briefcase"),
       CalendarDays = makeIcon("CalendarDays"), Music = makeIcon("Music"), Tent = makeIcon("Tent"),
-      ShoppingBasket = makeIcon("ShoppingBasket");
+      ShoppingBasket = makeIcon("ShoppingBasket"), Instagram = makeIcon("Instagram"),
+      Loader = makeIcon("Loader"), CheckCircle = makeIcon("CheckCircle"),
+      AlertCircle = makeIcon("AlertCircle"), ImageIcon = makeIcon("Image"),
+      LogIn = makeIcon("LogIn"), LogOut = makeIcon("LogOut"), UserIcon = makeIcon("User"),
+      Mail = makeIcon("Mail"), Lock = makeIcon("Lock");
 
+    /* ------------------------------------ DADOS ------------------------------------ */
+    const CITIES = ["Macaúbas", "Vitória da Conquista", "Paramirim", "Boquira"];
+    const OTHER_CITY = "__outra__";
 
+    // O "id" é exatamente o texto salvo na coluna `categoria` do Supabase
+    const CATEGORIES = [
+      { id: "Alimentação", icon: Utensils },
+      { id: "Saúde", icon: HeartPulse },
+      { id: "Serviços", icon: Wrench },
+      { id: "Hospedagem", icon: BedDouble },
+      { id: "Vagas", icon: Briefcase },
+      { id: "Eventos", icon: CalendarDays },
+    ];
 
-/**
- * Guia Comercial e de Serviços Regional – Sudoeste Baiano
- * Single-file: cole em app/page.jsx (Next.js App Router) ou em src/App.jsx (Vite).
+    // Agenda de exemplo (edite à vontade)
+    const EVENTS = [
+      { id: 1, title: "Festa de Largo do Povoado", city: "Macaúbas", day: "14", month: "NOV", type: "Festa de largo", icon: Tent },
+      { id: 2, title: "Show de Forró com Banda Regional", city: "Vitória da Conquista", day: "21", month: "NOV", type: "Show", icon: Music },
+      { id: 3, title: "Feira da Agricultura Familiar", city: "Paramirim", day: "28", month: "NOV", type: "Feira", icon: ShoppingBasket },
+      { id: 4, title: "Arraiá de Natal Boquirense", city: "Boquira", day: "12", month: "DEZ", type: "Festa", icon: Music },
+    ];
 
- * Tailwind CSS v3 ou v4 já configurado no projeto.
- *
- * Observação: usa <img> comum (sem next/image) para funcionar sem configurar domínios.
- * Todos os dados (negócios, telefones, eventos) são EXEMPLOS: troque pelos seus.
- */
+    /* ----------------------------------- HELPERS ----------------------------------- */
+    const onlyDigits = (v) => String(v || "").replace(/\D/g, "");
 
+    // Aceita (77) 99999-0000, 77999990000 ou 5577999990000 -> devolve 5577999990000
+    function normalizeWhats(v) {
+      const d = onlyDigits(v);
+      if (d.length === 10 || d.length === 11) return "55" + d;
+      if ((d.length === 12 || d.length === 13) && d.startsWith("55")) return d;
+      return "";
+    }
 
+    // Aceita @usuario, usuario ou link do perfil -> devolve só o usuário
+    function cleanInstagram(v) {
+      const u = String(v || "").trim()
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+        .replace(/^@/, "")
+        .split(/[/?#]/)[0];
+      return /^[A-Za-z0-9._]{1,30}$/.test(u) ? u : "";
+    }
 
+    function safeUrl(v) {
+      try {
+        const u = new URL(String(v || "").trim());
+        return u.protocol === "http:" || u.protocol === "https:" ? u.href : "";
+      } catch { return ""; }
+    }
 
-/* ----------------------------- DADOS DE EXEMPLO ---------------------------- */
+    // Só aceita links do Google Maps (evita link malicioso salvo por outra pessoa)
+    function safeMapUrl(v) {
+      const u = safeUrl(v);
+      if (!u) return "";
+      try {
+        const { hostname: h, pathname: p } = new URL(u);
+        const ok =
+          h === "maps.app.goo.gl" || h === "maps.google.com" ||
+          (h === "goo.gl" && p.startsWith("/maps")) ||
+          (/^(www\.)?google\.[a-z.]+$/.test(h) && p.startsWith("/maps"));
+        return ok ? u : "";
+      } catch { return ""; }
+    }
 
-const CITIES = ["Macaúbas", "Vitória da Conquista", "Paramirim", "Boquira"];
+    // Link "Como chegar": usa o mapa_url; se não houver, busca pelo endereço
+    function mapsLink(b) {
+      const direct = safeMapUrl(b.mapa_url);
+      if (direct) return direct;
+      const q = [b.nome_fantasia, b.endereco, b.cidade, "BA"].filter(Boolean).join(", ");
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+    }
 
-const CATEGORIES = [
-  { id: "alimentacao", label: "Alimentação", icon: Utensils },
-  { id: "saude", label: "Saúde", icon: HeartPulse },
-  { id: "servicos", label: "Serviços", icon: Wrench },
-  { id: "hospedagem", label: "Hospedagem", icon: BedDouble },
-  { id: "vagas", label: "Vagas", icon: Briefcase },
-  { id: "eventos", label: "Eventos", icon: CalendarDays },
-];
+    // Traduz erros de autenticação do Supabase
+    function authMsg(err) {
+      const m = String((err && err.message) || "").toLowerCase();
+      if (m.includes("invalid login")) return "E-mail ou senha incorretos.";
+      if (m.includes("not confirmed")) return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.";
+      if (m.includes("already registered")) return "Este e-mail já está cadastrado. Tente entrar.";
+      if (m.includes("rate limit") || m.includes("too many")) return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+      if (m.includes("password") && (m.includes("characters") || m.includes("weak"))) return "Senha fraca. Use pelo menos 8 caracteres.";
+      if (m.includes("provider") && (m.includes("not enabled") || m.includes("unsupported"))) return "O login com Google ainda não está ativado neste projeto.";
+      return "Não foi possível concluir. Tente novamente.";
+    }
 
-// hours: { dias da semana (0 = domingo) : [abre, fecha] em horas decimais } | null = fechado
-const WEEKDAYS = [1, 2, 3, 4, 5];
-const mk = (days, open, close) =>
-  Object.fromEntries(days.map((d) => [d, [open, close]]));
+    const PENDING_KEY = "guia_abrir_cadastro";
 
-const BUSINESSES = [
-  {
-    id: 1,
-    name: "Restaurante Sabor do Sertão",
-    city: "Macaúbas",
-    category: "alimentacao",
-    phone: "5577999990001",
-    image:
-      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=70",
-    hours: { ...mk([0, 6], 11, 15), ...mk(WEEKDAYS, 11, 22) },
-  },
-  {
-    id: 2,
-    name: "Clínica Vida & Saúde",
-    city: "Vitória da Conquista",
-    category: "saude",
-    phone: "5577999990002",
-    image:
-      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=70",
-    hours: { ...mk(WEEKDAYS, 7, 18), ...mk([6], 8, 12) },
-  },
-  {
-    id: 3,
-    name: "Pousada Serra Azul",
-    city: "Paramirim",
-    category: "hospedagem",
-    phone: "5577999990003",
-    image:
-      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=70",
-    hours: mk([0, 1, 2, 3, 4, 5, 6], 0, 24),
-  },
-  {
-    id: 4,
-    name: "Eletro Mecânica Boquira",
-    city: "Boquira",
-    category: "servicos",
-    phone: "5577999990004",
-    image:
-      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=70",
-    hours: { ...mk(WEEKDAYS, 7.5, 17.5), ...mk([6], 8, 12) },
-  },
-  {
-    id: 5,
-    name: "Padaria Pão Quente",
-    city: "Macaúbas",
-    category: "alimentacao",
-    phone: "5577999990005",
-    image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=70",
-    hours: mk([0, 1, 2, 3, 4, 5, 6], 5.5, 19),
-  },
-  {
-    id: 6,
-    name: "Hotel Planalto Conquista",
-    city: "Vitória da Conquista",
-    category: "hospedagem",
-    phone: "5577999990006",
-    image:
-      "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=800&q=70",
-    hours: mk([0, 1, 2, 3, 4, 5, 6], 0, 24),
-  },
-  {
-    id: 7,
-    name: "Centro de Empregos Regional",
-    city: "Vitória da Conquista",
-    category: "vagas",
-    phone: "5577999990007",
-    image:
-      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=70",
-    hours: mk(WEEKDAYS, 8, 17),
-  },
-  {
-    id: 8,
-    name: "Odonto Sorriso",
-    city: "Paramirim",
-    category: "saude",
-    phone: "5577999990008",
-    image:
-      "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=70",
-    hours: { ...mk(WEEKDAYS, 8, 18) },
-  },
-];
+    function whatsappLink(b) {
+      const msg = `Olá! Vi o *${b.nome_fantasia}* no Guia do Sertão e gostaria de mais informações.`;
+      return `https://wa.me/${onlyDigits(b.whatsapp)}?text=${encodeURIComponent(msg)}`;
+    }
 
-const EVENTS = [
-  {
-    id: 1,
-    title: "Festa de Largo do Povoado",
-    city: "Macaúbas",
-    day: "14",
-    month: "NOV",
-    type: "Festa de largo",
-    icon: Tent,
-  },
-  {
-    id: 2,
-    title: "Show de Forró com Banda Regional",
-    city: "Vitória da Conquista",
-    day: "21",
-    month: "NOV",
-    type: "Show",
-    icon: Music,
-  },
-  {
-    id: 3,
-    title: "Feira da Agricultura Familiar",
-    city: "Paramirim",
-    day: "28",
-    month: "NOV",
-    type: "Feira",
-    icon: ShoppingBasket,
-  },
-  {
-    id: 4,
-    title: "Arraiá de Natal Boquirense",
-    city: "Boquira",
-    day: "12",
-    month: "DEZ",
-    type: "Festa",
-    icon: Music,
-  },
-];
+    /* ---------------------------------- COMPONENTES ---------------------------------- */
+    function WhatsAppIcon({ className = "h-5 w-5" }) {
+      return (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+          <path d="M12.04 2a9.9 9.9 0 0 0-8.43 15.1L2 22l5.04-1.58A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-2.99.94.97-2.91-.2-.31a8.2 8.2 0 1 1 6.7 3.6Zm4.5-6.14c-.25-.12-1.46-.72-1.68-.8-.23-.08-.4-.12-.56.12-.17.25-.64.8-.78.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.3-2.88c-.25-.43.25-.4.72-1.33.08-.16.04-.3-.02-.42-.06-.12-.56-1.35-.77-1.85-.2-.48-.4-.42-.56-.43h-.48c-.16 0-.43.06-.65.3-.23.25-.87.85-.87 2.07s.9 2.4 1.01 2.57c.12.16 1.75 2.67 4.24 3.75 1.58.68 2.2.74 3 .62.49-.07 1.46-.6 1.67-1.17.2-.58.2-1.07.14-1.17-.06-.1-.23-.16-.48-.28Z" />
+        </svg>
+      );
+    }
 
-/* -------------------------------- HELPERS --------------------------------- */
-
-// Hora atual no fuso da Bahia (America/Bahia, UTC-3, sem horário de verão)
-function nowInBahia() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Bahia",
-    weekday: "short",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  }).formatToParts(new Date());
-  const get = (t) => parts.find((p) => p.type === t)?.value;
-  const dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return {
-    day: dayMap[get("weekday")],
-    hour: (parseInt(get("hour"), 10) % 24) + parseInt(get("minute"), 10) / 60,
-  };
-}
-
-function isOpenNow(hours, now) {
-  if (!now) return null; // ainda não calculado (evita erro de hidratação)
-  const range = hours[now.day];
-  if (!range) return false;
-  return now.hour >= range[0] && now.hour < range[1];
-}
-
-function whatsappLink(business) {
-  const msg = `Olá! Vi o *${business.name}* no Guia Regional e gostaria de mais informações.`;
-  return `https://wa.me/${business.phone}?text=${encodeURIComponent(msg)}`;
-}
-
-/* ------------------------------- COMPONENTES ------------------------------- */
-
-function WhatsAppIcon({ className = "h-5 w-5" }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M12.04 2a9.9 9.9 0 0 0-8.43 15.1L2 22l5.04-1.58A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-2.99.94.97-2.91-.2-.31a8.2 8.2 0 1 1 6.7 3.6Zm4.5-6.14c-.25-.12-1.46-.72-1.68-.8-.23-.08-.4-.12-.56.12-.17.25-.64.8-.78.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.3-2.88c-.25-.43.25-.4.72-1.33.08-.16.04-.3-.02-.42-.06-.12-.56-1.35-.77-1.85-.2-.48-.4-.42-.56-.43h-.48c-.16 0-.43.06-.65.3-.23.25-.87.85-.87 2.07s.9 2.4 1.01 2.57c.12.16 1.75 2.67 4.24 3.75 1.58.68 2.2.74 3 .62.49-.07 1.46-.6 1.67-1.17.2-.58.2-1.07.14-1.17-.06-.1-.23-.16-.48-.28Z" />
-    </svg>
-  );
-}
-
-function Header({ city, setCity }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-blue-950/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        {/* Logo */}
-        <a href="#" className="flex items-center gap-2">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400 text-blue-950 shadow-lg shadow-amber-400/20">
-            <Sun className="h-6 w-6" />
-          </span>
-          <span className="leading-tight">
-            <span className="block text-lg font-extrabold tracking-tight text-white">
-              Guia do Sertão
-            </span>
-            <span className="block text-[10px] font-medium uppercase tracking-widest text-amber-300">
-              Comércio &amp; Serviços
-            </span>
-          </span>
-        </a>
-
-        {/* Desktop */}
-        <div className="hidden items-center gap-3 md:flex">
-          <CitySelect city={city} setCity={setCity} />
-          <a
-            href="#cadastrar"
-            className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-blue-950 transition hover:bg-amber-300"
-          >
-            <Store className="h-4 w-4" />
-            Cadastrar meu Negócio
-          </a>
-        </div>
-
-        {/* Mobile toggle */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="rounded-lg p-2 text-white hover:bg-white/10 md:hidden"
-          aria-label="Abrir menu"
-        >
-          {open ? <X /> : <Menu />}
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="space-y-3 border-t border-white/10 px-4 pb-4 pt-3 md:hidden">
-          <CitySelect city={city} setCity={setCity} full />
-          <a
-            href="#cadastrar"
-            className="flex items-center justify-center gap-2 rounded-full bg-amber-400 px-5 py-3 text-sm font-bold text-blue-950"
-          >
-            <Store className="h-4 w-4" />
-            Cadastrar meu Negócio
-          </a>
-        </div>
-      )}
-    </header>
-  );
-}
-
-function CitySelect({ city, setCity, full = false }) {
-  return (
-    <div className={`relative ${full ? "w-full" : ""}`}>
-      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-300" />
-      <select
-        value={city}
-        onChange={(e) => setCity(e.target.value)}
-        aria-label="Filtrar por cidade"
-        className="w-full appearance-none rounded-full border border-white/15 bg-blue-900 py-2.5 pl-9 pr-9 text-sm font-medium text-white outline-none transition hover:bg-blue-800 focus:ring-2 focus:ring-amber-400"
-      >
-        <option value="">Toda a região</option>
-        {CITIES.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
-    </div>
-  );
-}
-
-function Hero({ query, setQuery, category, setCategory, city, setCity, onSearch }) {
-  const fieldBase =
-    "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-amber-400";
-
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-blue-700 text-white">
-      {/* Sol do sertão */}
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-400/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
-
-      <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
-        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-white/15">
-          <Sun className="h-3.5 w-3.5" /> Sudoeste baiano ao seu alcance
-        </span>
-
-        <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-          Tudo o que o <span className="text-amber-400">sertão</span> tem de
-          melhor, num só lugar.
-        </h1>
-        <p className="mt-4 max-w-2xl text-base text-blue-100 sm:text-lg">
-          Encontre comércios, serviços, vagas e eventos em Macaúbas, Vitória da
-          Conquista, Paramirim, Boquira e toda a microrregião.
-        </p>
-
-        {/* Busca */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSearch();
-          }}
-          className="mt-8 grid gap-3 rounded-2xl bg-white p-3 shadow-2xl shadow-blue-950/40 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_auto]"
-        >
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="O que você procura?"
-              className={`${fieldBase} pl-9`}
-            />
-          </div>
-
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className={fieldBase}
-            aria-label="Categoria"
-          >
-            <option value="">Todas as categorias</option>
-            {CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-
+    function CitySelect({ city, setCity, full = false }) {
+      return (
+        <div className={`relative ${full ? "w-full" : ""}`}>
+          <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-300" />
           <select
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className={fieldBase}
-            aria-label="Cidade"
+            aria-label="Filtrar por cidade"
+            className="w-full appearance-none rounded-full border border-white/15 bg-green-900 py-2.5 pl-9 pr-9 text-sm font-medium text-white outline-none transition hover:bg-green-800 focus:ring-2 focus:ring-amber-400"
           >
             <option value="">Toda a região</option>
-            {CITIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
+        </div>
+      );
+    }
 
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-blue-950 transition hover:bg-amber-300 sm:col-span-2 lg:col-span-1"
-          >
-            <Search className="h-4 w-4" />
-            Buscar
-          </button>
-        </form>
-      </div>
-    </section>
-  );
-}
+    function GoogleIcon({ className = "h-5 w-5" }) {
+      return (
+        <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+        </svg>
+      );
+    }
 
-function Categories({ active, setActive }) {
-  return (
-    <section className="mx-auto max-w-6xl px-4 py-10">
-      <h2 className="text-xl font-extrabold text-blue-950 sm:text-2xl">
-        Navegue por categoria
-      </h2>
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {CATEGORIES.map(({ id, label, icon: Icon }) => {
-          const selected = active === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setActive(selected ? "" : id)}
-              className={`group flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-semibold transition ${
-                selected
-                  ? "border-amber-400 bg-blue-950 text-white shadow-lg"
-                  : "border-slate-200 bg-white text-blue-950 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md"
-              }`}
-            >
-              <span
-                className={`grid h-12 w-12 place-items-center rounded-xl transition ${
-                  selected
-                    ? "bg-amber-400 text-blue-950"
-                    : "bg-blue-50 text-blue-800 group-hover:bg-amber-100"
-                }`}
-              >
-                <Icon className="h-6 w-6" />
-              </span>
-              {label}
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
+    function userInfo(user) {
+      const md = (user && user.user_metadata) || {};
+      const email = (user && user.email) || "";
+      return {
+        name: md.full_name || md.name || (email ? email.split("@")[0] : "Usuário"),
+        avatar: safeUrl(md.avatar_url || md.picture),
+        email,
+      };
+    }
 
-function StatusBadge({ open }) {
-  if (open === null) {
-    return <span className="h-6 w-24 animate-pulse rounded-full bg-slate-200" />;
-  }
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
-        open
-          ? "bg-emerald-100 text-emerald-700"
-          : "bg-rose-100 text-rose-700"
-      }`}
-    >
-      <span
-        className={`h-2 w-2 rounded-full ${
-          open ? "animate-pulse bg-emerald-500" : "bg-rose-500"
-        }`}
-      />
-      {open ? "Aberto Agora" : "Fechado"}
-    </span>
-  );
-}
-
-function BusinessCard({ business, now }) {
-  const open = isOpenNow(business.hours, now);
-  const cat = CATEGORIES.find((c) => c.id === business.category);
-
-  return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-      <div className="relative aspect-[16/10] overflow-hidden bg-slate-200">
-        <img
-          src={business.image}
-          alt={business.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-        />
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-blue-950/90 px-2.5 py-1 text-xs font-semibold text-amber-300 backdrop-blur">
-          <MapPin className="h-3 w-3" />
-          {business.city} - BA
+    function Avatar({ info, size = "h-9 w-9" }) {
+      const [failed, setFailed] = useState(false);
+      if (info.avatar && !failed) {
+        return (
+          <img src={info.avatar} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)}
+            className={`${size} rounded-full object-cover ring-2 ring-amber-400`} />
+        );
+      }
+      return (
+        <span className={`${size} grid place-items-center rounded-full bg-amber-400 text-sm font-extrabold text-green-950`}>
+          {(info.name || "?").charAt(0).toUpperCase()}
         </span>
-      </div>
+      );
+    }
 
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {cat?.label}
-          </span>
-          <StatusBadge open={open} />
-        </div>
+    function Header({ city, setCity, user, onRegister, onLogin, onLogout }) {
+      const [open, setOpen] = useState(false);
+      const [menu, setMenu] = useState(false);
+      const info = user ? userInfo(user) : null;
 
-        <h3 className="text-lg font-bold leading-snug text-blue-950">
-          {business.name}
-        </h3>
+      return (
+        <header className="sticky top-0 z-40 border-b border-white/10 bg-green-950/95 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+            <a href="#" className="flex items-center gap-2">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400 text-green-950 shadow-lg shadow-amber-400/20">
+                <Sun className="h-6 w-6" />
+              </span>
+              <span className="leading-tight">
+                <span className="block text-lg font-extrabold tracking-tight text-white">Guia do Sertão</span>
+                <span className="block text-[10px] font-medium uppercase tracking-widest text-amber-300">Comércio &amp; Serviços</span>
+              </span>
+            </a>
 
-        <a
-          href={whatsappLink(business)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1ebe5b] focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:ring-offset-2"
-        >
-          <WhatsAppIcon />
-          Chamar no WhatsApp
-        </a>
-      </div>
-    </article>
-  );
-}
+            {/* Desktop */}
+            <div className="hidden items-center gap-3 md:flex">
+              <CitySelect city={city} setCity={setCity} />
+              <button
+                onClick={onRegister}
+                className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-green-950 transition hover:bg-amber-300"
+              >
+                <Store className="h-4 w-4" /> Cadastrar meu Negócio
+              </button>
 
-function Featured({ items, now, onClear }) {
-  return (
-    <section className="bg-slate-50 py-12">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-xl font-extrabold text-blue-950 sm:text-2xl">
-              Estabelecimentos em destaque
-            </h2>
-            <p className="text-sm text-slate-500">
-              {items.length} resultado{items.length !== 1 && "s"} encontrado
-              {items.length !== 1 && "s"}
-            </p>
-          </div>
-        </div>
+              {info ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setMenu(!menu)} aria-label="Menu da conta"
+                    className="flex items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-3 text-white transition hover:bg-white/20"
+                  >
+                    <Avatar info={info} />
+                    <span className="max-w-[110px] truncate text-sm font-semibold">{info.name.split(" ")[0]}</span>
+                    <ChevronDown className="h-4 w-4 text-white/70" />
+                  </button>
+                  {menu && (
+                    <>
+                      <button className="fixed inset-0 z-40 cursor-default" aria-label="Fechar menu" onClick={() => setMenu(false)} />
+                      <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-stone-200 bg-white text-stone-800 shadow-xl">
+                        <div className="border-b border-stone-100 p-4">
+                          <p className="truncate font-bold text-green-950">{info.name}</p>
+                          <p className="truncate text-xs text-stone-500">{info.email}</p>
+                        </div>
+                        <button
+                          onClick={() => { setMenu(false); onRegister(); }}
+                          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-green-900 hover:bg-green-50"
+                        >
+                          <Store className="h-4 w-4" /> Cadastrar empresa
+                        </button>
+                        <button
+                          onClick={() => { setMenu(false); onLogout(); }}
+                          className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+                        >
+                          <LogOut className="h-4 w-4" /> Sair
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={onLogin}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <LogIn className="h-4 w-4" /> Entrar / Criar Conta
+                </button>
+              )}
+            </div>
 
-        {items.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-            <p className="font-semibold text-blue-950">
-              Nenhum estabelecimento encontrado.
-            </p>
-            <button
-              onClick={onClear}
-              className="mt-3 rounded-full bg-blue-950 px-5 py-2 text-sm font-bold text-white hover:bg-blue-900"
-            >
-              Limpar filtros
+            {/* Mobile */}
+            <button onClick={() => setOpen(!open)} className="rounded-lg p-2 text-white hover:bg-white/10 md:hidden" aria-label="Abrir menu">
+              {open ? <X /> : <Menu />}
             </button>
           </div>
-        ) : (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((b) => (
-              <BusinessCard key={b.id} business={b} now={now} />
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
 
-function Agenda() {
-  return (
-    <section className="mx-auto max-w-6xl px-4 py-12">
-      <div className="flex items-center gap-2">
-        <CalendarDays className="h-6 w-6 text-amber-500" />
-        <h2 className="text-xl font-extrabold text-blue-950 sm:text-2xl">
-          Agenda Cultural
-        </h2>
-      </div>
-
-      <ul className="mt-6 grid gap-3 md:grid-cols-2">
-        {EVENTS.map(({ id, title, city, day, month, type, icon: Icon }) => (
-          <li
-            key={id}
-            className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-amber-400 hover:shadow-md"
-          >
-            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-blue-950 text-center text-white">
-              <div>
-                <div className="text-xl font-extrabold leading-none text-amber-400">
-                  {day}
+          {open && (
+            <div className="space-y-3 border-t border-white/10 px-4 pb-4 pt-3 md:hidden">
+              {info && (
+                <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-3 text-white">
+                  <Avatar info={info} size="h-11 w-11" />
+                  <div className="min-w-0">
+                    <p className="truncate font-bold">{info.name}</p>
+                    <p className="truncate text-xs text-green-200">{info.email}</p>
+                  </div>
                 </div>
-                <div className="text-[10px] font-bold tracking-widest">
-                  {month}
+              )}
+              <CitySelect city={city} setCity={setCity} full />
+              <button
+                onClick={() => { setOpen(false); onRegister(); }}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-amber-400 px-5 py-3 text-sm font-bold text-green-950"
+              >
+                <Store className="h-4 w-4" /> Cadastrar meu Negócio
+              </button>
+              {info ? (
+                <button
+                  onClick={() => { setOpen(false); onLogout(); }}
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-5 py-3 text-sm font-semibold text-white"
+                >
+                  <LogOut className="h-4 w-4" /> Sair
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setOpen(false); onLogin(); }}
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-5 py-3 text-sm font-semibold text-white"
+                >
+                  <LogIn className="h-4 w-4" /> Entrar / Criar Conta
+                </button>
+              )}
+            </div>
+          )}
+        </header>
+      );
+    }
+
+    function Hero({ query, setQuery, category, setCategory, city, setCity, onSearch }) {
+      const field = "w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 outline-none focus:ring-2 focus:ring-amber-400";
+      return (
+        <section className="relative overflow-hidden bg-gradient-to-br from-green-950 via-green-900 to-green-700 text-white">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-400/30 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-yellow-300/10 blur-3xl" />
+
+          <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-white/15">
+              <Sun className="h-3.5 w-3.5" /> Sudoeste baiano ao seu alcance
+            </span>
+            <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+              Tudo o que o <span className="text-amber-400">sertão</span> tem de melhor, num só lugar.
+            </h1>
+            <p className="mt-4 max-w-2xl text-base text-green-100 sm:text-lg">
+              Encontre comércios, serviços, vagas e eventos em Macaúbas, Vitória da Conquista, Paramirim, Boquira e toda a microrregião.
+            </p>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); onSearch(); }}
+              className="mt-8 grid gap-3 rounded-2xl bg-white p-3 shadow-2xl shadow-green-950/40 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_auto]"
+            >
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+                  placeholder="O que você procura?" className={`${field} pl-9`}
+                />
+              </div>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={field} aria-label="Categoria">
+                <option value="">Todas as categorias</option>
+                {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.id}</option>)}
+              </select>
+              <select value={city} onChange={(e) => setCity(e.target.value)} className={field} aria-label="Cidade">
+                <option value="">Toda a região</option>
+                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-green-950 transition hover:bg-amber-300 sm:col-span-2 lg:col-span-1"
+              >
+                <Search className="h-4 w-4" /> Buscar
+              </button>
+            </form>
+          </div>
+        </section>
+      );
+    }
+
+    function Categories({ active, setActive }) {
+      return (
+        <section className="mx-auto max-w-6xl px-4 py-10">
+          <h2 className="text-xl font-extrabold text-green-950 sm:text-2xl">Navegue por categoria</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {CATEGORIES.map(({ id, icon: Icon }) => {
+              const selected = active === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActive(selected ? "" : id)}
+                  className={`group flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-semibold transition ${
+                    selected
+                      ? "border-amber-400 bg-green-900 text-white shadow-lg"
+                      : "border-stone-200 bg-white text-green-950 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md"
+                  }`}
+                >
+                  <span className={`grid h-12 w-12 place-items-center rounded-xl transition ${
+                    selected ? "bg-amber-400 text-green-950" : "bg-green-50 text-green-800 group-hover:bg-amber-100"
+                  }`}>
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  {id}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      );
+    }
+
+    function BusinessCard({ b }) {
+      const [imgFailed, setImgFailed] = useState(false);
+      const img = safeUrl(b.imagem_url);
+      const insta = cleanInstagram(b.instagram);
+      const hasWhats = onlyDigits(b.whatsapp).length >= 10;
+
+      return (
+        <article className="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+          <div className="relative aspect-[16/10] overflow-hidden bg-green-100">
+            {img && !imgFailed ? (
+              <img
+                src={img} alt={b.nome_fantasia} loading="lazy" referrerPolicy="no-referrer"
+                onError={() => setImgFailed(true)}
+                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center bg-gradient-to-br from-green-800 to-green-600 text-amber-300">
+                <ImageIcon className="h-10 w-10 opacity-70" />
+              </div>
+            )}
+            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-green-950/90 px-2.5 py-1 text-xs font-semibold text-amber-300 backdrop-blur">
+              <MapPin className="h-3 w-3" /> {b.cidade} - BA
+            </span>
+          </div>
+
+          <div className="flex flex-1 flex-col gap-2 p-4">
+            <span className="w-fit rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-amber-800">
+              {b.categoria}
+            </span>
+            <h3 className="text-lg font-bold leading-snug text-green-950">{b.nome_fantasia}</h3>
+            {b.descricao && <p className="line-clamp-3 text-sm text-stone-600">{b.descricao}</p>}
+            {b.endereco && (
+              <p className="flex items-start gap-1.5 text-xs text-stone-500">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {b.endereco}
+              </p>
+            )}
+
+            <div className="mt-auto flex flex-col gap-2 pt-3">
+              <a
+                href={mapsLink(b)} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-extrabold text-green-950 shadow-sm transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+              >
+                <MapPin className="h-5 w-5" /> Como Chegar / Ver no Mapa
+              </a>
+              {hasWhats && (
+                <a
+                  href={whatsappLink(b)} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1ebe5b] focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:ring-offset-2"
+                >
+                  <WhatsAppIcon /> Chamar no WhatsApp
+                </a>
+              )}
+              {insta && (
+                <a
+                  href={`https://instagram.com/${insta}`} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-900/20 bg-white px-4 py-2.5 text-sm font-semibold text-green-900 transition hover:border-amber-400 hover:bg-amber-50"
+                >
+                  <Instagram className="h-4 w-4" /> @{insta}
+                </a>
+              )}
+            </div>
+          </div>
+        </article>
+      );
+    }
+
+    function Featured({ items, loading, error, onClear, onRegister }) {
+      return (
+        <section className="bg-green-50/60 py-12">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="text-xl font-extrabold text-green-950 sm:text-2xl">Estabelecimentos em destaque</h2>
+            {!loading && !error && (
+              <p className="text-sm text-stone-500">
+                {items.length} resultado{items.length !== 1 && "s"} encontrado{items.length !== 1 && "s"}
+              </p>
+            )}
+
+            {loading && (
+              <div className="mt-8 flex items-center justify-center gap-3 rounded-2xl bg-white p-10 text-green-900">
+                <Loader className="h-6 w-6 animate-spin" /> Carregando estabelecimentos...
+              </div>
+            )}
+
+            {!loading && error && (
+              <div className="mt-8 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-800">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {!loading && !error && items.length === 0 && (
+              <div className="mt-8 rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+                <p className="font-semibold text-green-950">Nenhum estabelecimento encontrado.</p>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <button onClick={onClear} className="rounded-full bg-green-900 px-5 py-2 text-sm font-bold text-white hover:bg-green-800">
+                    Limpar filtros
+                  </button>
+                  <button onClick={onRegister} className="rounded-full bg-amber-400 px-5 py-2 text-sm font-bold text-green-950 hover:bg-amber-300">
+                    Cadastrar meu negócio
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="truncate font-bold text-blue-950">{title}</h3>
-              <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
-                <MapPin className="h-3.5 w-3.5" /> {city} - BA
-              </p>
-            </div>
-            <span className="hidden items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 sm:inline-flex">
-              <Icon className="h-3.5 w-3.5" />
-              {type}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+            )}
 
-function CtaBusiness() {
-  return (
-    <section id="cadastrar" className="px-4 pb-14">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 to-blue-700 p-8 text-center text-white sm:p-12">
-        <Store className="mx-auto h-10 w-10 text-amber-400" />
-        <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">
-          Seu negócio merece ser encontrado
-        </h2>
-        <p className="mx-auto mt-2 max-w-xl text-blue-100">
-          Cadastre sua empresa no guia e receba clientes direto no WhatsApp.
-        </p>
-        <a
-          href="https://wa.me/5577999990000?text=Ol%C3%A1!%20Quero%20cadastrar%20meu%20neg%C3%B3cio%20no%20Guia%20do%20Sert%C3%A3o."
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-amber-400 px-7 py-3 font-bold text-blue-950 transition hover:bg-amber-300"
+            {!loading && !error && items.length > 0 && (
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {items.map((b) => <BusinessCard key={b.id} b={b} />)}
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    function Agenda() {
+      return (
+        <section className="mx-auto max-w-6xl px-4 py-12">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-6 w-6 text-amber-500" />
+            <h2 className="text-xl font-extrabold text-green-950 sm:text-2xl">Agenda Cultural</h2>
+          </div>
+          <ul className="mt-6 grid gap-3 md:grid-cols-2">
+            {EVENTS.map(({ id, title, city, day, month, type, icon: Icon }) => (
+              <li key={id} className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-4 transition hover:border-amber-400 hover:shadow-md">
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-green-900 text-center text-white">
+                  <div>
+                    <div className="text-xl font-extrabold leading-none text-amber-400">{day}</div>
+                    <div className="text-[10px] font-bold tracking-widest">{month}</div>
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-bold text-green-950">{title}</h3>
+                  <p className="mt-0.5 flex items-center gap-1 text-sm text-stone-500">
+                    <MapPin className="h-3.5 w-3.5" /> {city} - BA
+                  </p>
+                </div>
+                <span className="hidden items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 sm:inline-flex">
+                  <Icon className="h-3.5 w-3.5" /> {type}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+    }
+
+    function CtaBusiness({ onRegister }) {
+      return (
+        <section className="px-4 pb-14">
+          <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-green-950 to-green-700 p-8 text-center text-white sm:p-12">
+            <Store className="mx-auto h-10 w-10 text-amber-400" />
+            <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">Seu negócio merece ser encontrado</h2>
+            <p className="mx-auto mt-2 max-w-xl text-green-100">
+              Cadastre sua empresa no guia e receba clientes direto no WhatsApp.
+            </p>
+            <button
+              onClick={onRegister}
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-amber-400 px-7 py-3 font-bold text-green-950 transition hover:bg-amber-300"
+            >
+              <Store className="h-5 w-5" /> Cadastrar minha empresa
+            </button>
+          </div>
+        </section>
+      );
+    }
+
+    function Footer() {
+      return (
+        <footer className="border-t border-white/10 bg-green-950 py-8 text-center text-sm text-green-200">
+          <div className="mx-auto max-w-6xl px-4">
+            <p className="flex items-center justify-center gap-2 font-bold text-white">
+              <Sun className="h-4 w-4 text-amber-400" /> Guia do Sertão
+            </p>
+            <p className="mt-1">Macaúbas · Vitória da Conquista · Paramirim · Boquira · Bahia</p>
+            <p className="mt-3 text-xs text-green-300">© {new Date().getFullYear()} Guia do Sertão. Todos os direitos reservados.</p>
+          </div>
+        </footer>
+      );
+    }
+
+    /* ------------------------------ MODAL BASE ------------------------------ */
+    function Modal({ title, icon: Icon, onClose, children }) {
+      useEffect(() => {
+        const onKey = (e) => e.key === "Escape" && onClose();
+        document.addEventListener("keydown", onKey);
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+          document.removeEventListener("keydown", onKey);
+          document.body.style.overflow = prev;
+        };
+      }, []);
+      return (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-green-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onMouseDown={(e) => e.target === e.currentTarget && onClose()} role="dialog" aria-modal="true"
         >
-          <WhatsAppIcon className="h-5 w-5" />
-          Quero cadastrar
-        </a>
-      </div>
-    </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-white/10 bg-blue-950 py-8 text-center text-sm text-blue-200">
-      <div className="mx-auto max-w-6xl px-4">
-        <p className="flex items-center justify-center gap-2 font-bold text-white">
-          <Sun className="h-4 w-4 text-amber-400" /> Guia do Sertão
-        </p>
-        <p className="mt-1">
-          Macaúbas · Vitória da Conquista · Paramirim · Boquira · Bahia
-        </p>
-        <p className="mt-3 text-xs text-blue-300">
-          © {new Date().getFullYear()} Guia do Sertão. Todos os direitos
-          reservados.
-        </p>
-      </div>
-    </footer>
-  );
-}
-
-/* --------------------------------- PÁGINA --------------------------------- */
-
-function GuiaRegionalPage() {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
-  const [city, setCity] = useState("");
-  const [now, setNow] = useState(null);
-
-  // Atualiza o "Aberto Agora" a cada minuto (apenas no cliente)
-  useEffect(() => {
-    setNow(nowInBahia());
-    const t = setInterval(() => setNow(nowInBahia()), 60_000);
-    return () => clearInterval(t);
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return BUSINESSES.filter(
-      (b) =>
-        (!city || b.city === city) &&
-        (!category || b.category === category) &&
-        (!q || b.name.toLowerCase().includes(q))
-    );
-  }, [query, category, city]);
-
-  const scrollToResults = () =>
-    document.getElementById("destaques")?.scrollIntoView({ behavior: "smooth" });
-
-  const clearFilters = () => {
-    setQuery("");
-    setCategory("");
-    setCity("");
-  };
-
-  return (
-    <div className="min-h-screen bg-white font-sans text-slate-800 antialiased">
-      <Header city={city} setCity={setCity} />
-      <main>
-        <Hero
-          query={query}
-          setQuery={setQuery}
-          category={category}
-          setCategory={setCategory}
-          city={city}
-          setCity={setCity}
-          onSearch={scrollToResults}
-        />
-        <Categories active={category} setActive={setCategory} />
-        <div id="destaques">
-          <Featured items={filtered} now={now} onClear={clearFilters} />
+          <div className="flex max-h-[95vh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+            <div className="flex items-center justify-between bg-gradient-to-r from-green-950 to-green-800 px-5 py-4 text-white">
+              <div className="flex items-center gap-2">
+                <Icon className="h-5 w-5 text-amber-400" />
+                <h2 className="text-lg font-extrabold">{title}</h2>
+              </div>
+              <button onClick={onClose} aria-label="Fechar" className="rounded-lg p-1.5 hover:bg-white/10">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto">{children}</div>
+          </div>
         </div>
-        <Agenda />
-        <CtaBusiness />
-      </main>
-      <Footer />
-    </div>
-  );
-}
+      );
+    }
 
+    const inputCls = "w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-800 outline-none transition focus:border-green-700 focus:ring-2 focus:ring-amber-400";
+    const labelCls = "mb-1 block text-sm font-semibold text-green-950";
+
+    function Notice({ type, children }) {
+      const ok = type === "ok";
+      return (
+        <div className={`flex items-start gap-2 rounded-xl border p-3 text-sm ${
+          ok ? "border-green-200 bg-green-50 text-green-800" : "border-rose-200 bg-rose-50 text-rose-800"
+        }`}>
+          {ok ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+          <span>{children}</span>
+        </div>
+      );
+    }
+
+    /* ------------------------------ LOGIN / CRIAR CONTA ------------------------------ */
+    function AuthModal({ onClose, reason }) {
+      const [mode, setMode] = useState("login"); // login | signup | reset
+      const [email, setEmail] = useState("");
+      const [password, setPassword] = useState("");
+      const [busy, setBusy] = useState(false);
+      const [msg, setMsg] = useState(null); // { type: "ok" | "err", text }
+
+      const redirectTo = window.location.origin + window.location.pathname;
+
+      async function handleGoogle() {
+        setMsg(null);
+        if (!sb) return setMsg({ type: "err", text: "Conecte o Supabase no código (SUPABASE_URL e SUPABASE_ANON_KEY)." });
+        if (reason === "register") {
+          try { sessionStorage.setItem(PENDING_KEY, "1"); } catch {}
+        }
+        const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+        if (error) {
+          try { sessionStorage.removeItem(PENDING_KEY); } catch {}
+          setMsg({ type: "err", text: authMsg(error) });
+        }
+      }
+
+      async function handleSubmit(e) {
+        e.preventDefault();
+        setMsg(null);
+        if (!sb) return setMsg({ type: "err", text: "Conecte o Supabase no código (SUPABASE_URL e SUPABASE_ANON_KEY)." });
+        const mail = email.trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(mail)) return setMsg({ type: "err", text: "Informe um e-mail válido." });
+
+        setBusy(true);
+        try {
+          if (mode === "reset") {
+            const { error } = await sb.auth.resetPasswordForEmail(mail, { redirectTo });
+            if (error) return setMsg({ type: "err", text: authMsg(error) });
+            return setMsg({ type: "ok", text: "Se este e-mail tiver conta, enviamos um link para criar uma nova senha." });
+          }
+          if (mode === "login") {
+            const { error } = await sb.auth.signInWithPassword({ email: mail, password });
+            if (error) return setMsg({ type: "err", text: authMsg(error) });
+            return; // o onAuthStateChange fecha o modal
+          }
+          // signup
+          if (password.length < 8) return setMsg({ type: "err", text: "A senha deve ter pelo menos 8 caracteres." });
+          const { data, error } = await sb.auth.signUp({ email: mail, password, options: { emailRedirectTo: redirectTo } });
+          if (error) return setMsg({ type: "err", text: authMsg(error) });
+          if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+            return setMsg({ type: "err", text: "Este e-mail já está cadastrado. Entre ou use \"Esqueci a senha\"." });
+          }
+          if (data.session) return; // confirmação de e-mail desligada: já entrou
+          setMsg({ type: "ok", text: `Enviamos um e-mail de confirmação para ${mail}. Clique no link para ativar sua conta e depois volte para entrar.` });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      const title = mode === "signup" ? "Criar conta" : mode === "reset" ? "Recuperar senha" : "Entrar";
+      const tab = (id, text) => (
+        <button
+          type="button" onClick={() => { setMode(id); setMsg(null); }}
+          className={`flex-1 rounded-full py-2 text-sm font-bold transition ${
+            mode === id ? "bg-green-900 text-white shadow" : "text-green-900 hover:bg-green-50"
+          }`}
+        >{text}</button>
+      );
+
+      return (
+        <Modal title={title} icon={UserIcon} onClose={onClose}>
+          <div className="space-y-4 p-5">
+            {reason === "register" && (
+              <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+                Para cadastrar sua empresa, entre ou crie uma conta. É rápido e gratuito.
+              </p>
+            )}
+
+            {mode !== "reset" && (
+              <>
+                <div className="flex gap-1 rounded-full bg-stone-100 p-1">
+                  {tab("login", "Entrar")}
+                  {tab("signup", "Criar conta")}
+                </div>
+
+                <button
+                  type="button" onClick={handleGoogle}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-stone-300 bg-white px-4 py-3 text-sm font-bold text-stone-800 shadow-sm transition hover:bg-stone-50"
+                >
+                  <GoogleIcon /> Continuar com Google
+                </button>
+
+                <div className="flex items-center gap-3 text-xs text-stone-400">
+                  <span className="h-px flex-1 bg-stone-200" /> ou com e-mail <span className="h-px flex-1 bg-stone-200" />
+                </div>
+              </>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className={labelCls}>E-mail</label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="email" autoComplete="email" required className={`${inputCls} pl-9`}
+                    value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@email.com"
+                  />
+                </div>
+              </div>
+
+              {mode !== "reset" && (
+                <div>
+                  <label className={labelCls}>Senha</label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type="password" required className={`${inputCls} pl-9`}
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      value={password} onChange={(e) => setPassword(e.target.value)}
+                      placeholder={mode === "signup" ? "Mínimo de 8 caracteres" : "Sua senha"}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {msg && <Notice type={msg.type}>{msg.text}</Notice>}
+
+              <button
+                type="submit" disabled={busy}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-green-950 transition hover:bg-amber-300 disabled:opacity-60"
+              >
+                {busy && <Loader className="h-4 w-4 animate-spin" />}
+                {mode === "login" ? "Entrar" : mode === "signup" ? "Criar minha conta" : "Enviar link de recuperação"}
+              </button>
+            </form>
+
+            <div className="text-center text-sm">
+              {mode === "login" && (
+                <button type="button" onClick={() => { setMode("reset"); setMsg(null); }} className="font-semibold text-green-800 hover:underline">
+                  Esqueci a senha
+                </button>
+              )}
+              {mode === "reset" && (
+                <button type="button" onClick={() => { setMode("login"); setMsg(null); }} className="font-semibold text-green-800 hover:underline">
+                  Voltar para o login
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      );
+    }
+
+    // Aparece quando a pessoa chega pelo link "recuperar senha" do e-mail
+    function NewPasswordModal({ onClose }) {
+      const [pw, setPw] = useState("");
+      const [msg, setMsg] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [ok, setOk] = useState(false);
+
+      async function submit(e) {
+        e.preventDefault();
+        if (pw.length < 8) return setMsg({ type: "err", text: "A senha deve ter pelo menos 8 caracteres." });
+        setBusy(true);
+        const { error } = await sb.auth.updateUser({ password: pw });
+        setBusy(false);
+        if (error) return setMsg({ type: "err", text: authMsg(error) });
+        setOk(true);
+      }
+
+      return (
+        <Modal title="Criar nova senha" icon={Lock} onClose={onClose}>
+          {ok ? (
+            <div className="p-8 text-center">
+              <CheckCircle className="mx-auto h-14 w-14 text-green-600" />
+              <p className="mt-3 font-bold text-green-950">Senha atualizada com sucesso!</p>
+              <button onClick={onClose} className="mt-5 rounded-full bg-amber-400 px-7 py-2.5 font-bold text-green-950 hover:bg-amber-300">Continuar</button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="space-y-3 p-5">
+              <label className={labelCls}>Nova senha</label>
+              <input type="password" required autoComplete="new-password" className={inputCls}
+                value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Mínimo de 8 caracteres" />
+              {msg && <Notice type={msg.type}>{msg.text}</Notice>}
+              <button type="submit" disabled={busy}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-amber-400 px-6 py-3 text-sm font-bold text-green-950 hover:bg-amber-300 disabled:opacity-60">
+                {busy && <Loader className="h-4 w-4 animate-spin" />} Salvar nova senha
+              </button>
+            </form>
+          )}
+        </Modal>
+      );
+    }
+
+    /* ------------------------------ CADASTRAR EMPRESA ------------------------------ */
+    const EMPTY_FORM = {
+      nome_fantasia: "", categoria: "", cidade: "", outraCidade: "",
+      endereco: "", whatsapp: "", instagram: "", descricao: "", imagem_url: "", mapa_url: "",
+      website: "", // campo-isca anti-spam (deve ficar vazio)
+    };
+
+    function RegisterModal({ user, onClose }) {
+      const [form, setForm] = useState(EMPTY_FORM);
+      const [sending, setSending] = useState(false);
+      const [error, setError] = useState("");
+      const [done, setDone] = useState(null); // { emailSent: boolean }
+
+      const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+      async function handleSubmit(e) {
+        e.preventDefault();
+        setError("");
+        if (form.website) { setDone({ ok: true }); return; } // robô: finge sucesso e não envia
+        if (!sb || !user) return setError("Você precisa estar logado para cadastrar uma empresa.");
+
+        const nome = form.nome_fantasia.trim();
+        const cidade = form.cidade === OTHER_CITY ? form.outraCidade.trim() : form.cidade;
+        const whatsapp = normalizeWhats(form.whatsapp);
+        const instagram = cleanInstagram(form.instagram);
+        const imagem = safeUrl(form.imagem_url);
+        const mapa = safeMapUrl(form.mapa_url);
+
+        if (nome.length < 2) return setError("Informe o nome fantasia do negócio.");
+        if (!form.categoria) return setError("Escolha uma categoria.");
+        if (!cidade) return setError("Informe a cidade.");
+        if (!whatsapp) return setError("WhatsApp inválido. Use DDD + número, ex.: (77) 99999-0000.");
+        if (form.instagram.trim() && !instagram) return setError("Instagram inválido. Use @usuario ou o link do perfil.");
+        if (form.imagem_url.trim() && !imagem) return setError("A URL da foto/logo deve começar com http:// ou https://");
+        if (form.mapa_url.trim() && !mapa) return setError("O link do mapa deve ser do Google Maps (google.com/maps ou maps.app.goo.gl).");
+
+        setSending(true);
+        const { error: dbError } = await sb.from("estabelecimentos").insert({
+          nome_fantasia: nome.slice(0, 120),
+          categoria: form.categoria,
+          cidade: cidade.slice(0, 80),
+          endereco: form.endereco.trim().slice(0, 200) || null,
+          whatsapp,
+          instagram: instagram || null,
+          descricao: form.descricao.trim().slice(0, 500) || null,
+          imagem_url: imagem || null,
+          mapa_url: mapa || null,
+          aprovado: false, // sempre entra pendente de aprovação
+          user_id: user.id,
+        });
+
+        if (dbError) {
+          setSending(false);
+          console.error(dbError);
+          return setError("Não foi possível enviar agora. Tente novamente em instantes.");
+        }
+
+        setSending(false);
+        setDone({ ok: true });
+      }
+
+      return (
+        <Modal title="Cadastrar meu Negócio" icon={Store} onClose={onClose}>
+          {done ? (
+            <div className="p-8 text-center">
+              <CheckCircle className="mx-auto h-14 w-14 text-green-600" />
+              <h3 className="mt-3 text-xl font-extrabold text-green-950">Cadastro recebido!</h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-stone-600">
+                Recebemos o cadastro da sua empresa! Ele está aguardando aprovação e, assim que for revisado, aparecerá no guia.
+              </p>
+              <button onClick={onClose} className="mt-6 rounded-full bg-amber-400 px-7 py-2.5 font-bold text-green-950 hover:bg-amber-300">
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4 p-5">
+              <div>
+                <label className={labelCls}>Nome fantasia *</label>
+                <input className={inputCls} value={form.nome_fantasia} onChange={set("nome_fantasia")} maxLength={120} placeholder="Ex.: Padaria Pão Quente" required />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls}>Categoria *</label>
+                  <select className={inputCls} value={form.categoria} onChange={set("categoria")} required>
+                    <option value="">Selecione...</option>
+                    {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.id}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Cidade *</label>
+                  <select className={inputCls} value={form.cidade} onChange={set("cidade")} required>
+                    <option value="">Selecione...</option>
+                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value={OTHER_CITY}>Outra cidade da região</option>
+                  </select>
+                </div>
+              </div>
+
+              {form.cidade === OTHER_CITY && (
+                <div>
+                  <label className={labelCls}>Qual cidade? *</label>
+                  <input className={inputCls} value={form.outraCidade} onChange={set("outraCidade")} maxLength={80} placeholder="Nome da cidade" />
+                </div>
+              )}
+
+              <div>
+                <label className={labelCls}>Endereço</label>
+                <input className={inputCls} value={form.endereco} onChange={set("endereco")} maxLength={200} placeholder="Rua, número, bairro" />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls}>WhatsApp *</label>
+                  <input className={inputCls} value={form.whatsapp} onChange={set("whatsapp")} inputMode="tel" placeholder="(77) 99999-0000" required />
+                </div>
+                <div>
+                  <label className={labelCls}>Instagram</label>
+                  <input className={inputCls} value={form.instagram} onChange={set("instagram")} placeholder="@seunegocio" />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Descrição</label>
+                <textarea className={inputCls} rows={3} value={form.descricao} onChange={set("descricao")} maxLength={500} placeholder="Conte em poucas palavras o que você oferece" />
+                <p className="mt-1 text-right text-xs text-stone-400">{form.descricao.length}/500</p>
+              </div>
+
+              <div>
+                <label className={labelCls}>URL da foto / logo</label>
+                <input className={inputCls} value={form.imagem_url} onChange={set("imagem_url")} inputMode="url" placeholder="https://..." />
+                <p className="mt-1 text-xs text-stone-500">Cole o link de uma imagem já hospedada (opcional).</p>
+              </div>
+
+              <div>
+                <label className={labelCls}>Link da localização no Google Maps</label>
+                <div className="relative">
+                  <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <input className={`${inputCls} pl-9`} value={form.mapa_url} onChange={set("mapa_url")} inputMode="url" placeholder="https://maps.app.goo.gl/..." />
+                </div>
+                <p className="mt-1 text-xs text-stone-500">Como pegar o link: Abra o Google Maps ➔ Pesquise seu negócio ➔ Clique em Compartilhar ➔ Copie o link e cole aqui.</p>
+              </div>
+
+              {/* Campo-isca: invisível para pessoas, preenchido por robôs */}
+              <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+                <label>Não preencha<input tabIndex={-1} autoComplete="off" value={form.website} onChange={set("website")} /></label>
+              </div>
+
+              {error && <Notice type="err">{error}</Notice>}
+
+              <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                <button type="button" onClick={onClose} className="rounded-full border border-stone-300 px-6 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-50">
+                  Cancelar
+                </button>
+                <button
+                  type="submit" disabled={sending}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-400 px-7 py-2.5 text-sm font-bold text-green-950 transition hover:bg-amber-300 disabled:opacity-60"
+                >
+                  {sending ? <><Loader className="h-4 w-4 animate-spin" /> Enviando...</> : "Enviar cadastro"}
+                </button>
+              </div>
+              <p className="text-center text-xs text-stone-500">
+                Seu cadastro passa por aprovação antes de aparecer no site.
+              </p>
+            </form>
+          )}
+        </Modal>
+      );
+    }
+
+    /* ----------------------------------- PÁGINA ----------------------------------- */
+    function GuiaRegionalPage() {
+      const [query, setQuery] = useState("");
+      const [category, setCategory] = useState("");
+      const [city, setCity] = useState("");
+      const [items, setItems] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState("");
+
+      const [user, setUser] = useState(null);
+      const [authOpen, setAuthOpen] = useState(false);
+      const [authReason, setAuthReason] = useState("");
+      const [showForm, setShowForm] = useState(false);
+      const [recovery, setRecovery] = useState(false);
+      const wantsRegister = React.useRef(false);
+
+      // Sessão do usuário (inclui o retorno do Google e dos links de e-mail)
+      useEffect(() => {
+        if (!sb) return;
+        sb.auth.getSession().then(({ data }) => setUser((data.session && data.session.user) || null));
+        const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
+          setUser((session && session.user) || null);
+          if (event === "PASSWORD_RECOVERY") setRecovery(true);
+          if (event === "SIGNED_IN") {
+            setAuthOpen(false);
+            let pending = wantsRegister.current;
+            try {
+              if (sessionStorage.getItem(PENDING_KEY)) { pending = true; sessionStorage.removeItem(PENDING_KEY); }
+            } catch {}
+            if (pending) { wantsRegister.current = false; setShowForm(true); }
+          }
+        });
+        return () => sub.subscription.unsubscribe();
+      }, []);
+
+      // Lista somente os estabelecimentos aprovados
+      useEffect(() => {
+        let cancelled = false;
+        async function load() {
+          if (!sb) {
+            setError("Conecte o Supabase: preencha SUPABASE_URL e SUPABASE_ANON_KEY no início do código.");
+            setLoading(false);
+            return;
+          }
+          const { data, error: dbError } = await sb
+            .from("estabelecimentos")
+            .select("id, nome_fantasia, categoria, cidade, endereco, whatsapp, instagram, descricao, imagem_url, mapa_url")
+            .eq("aprovado", true)
+            .order("nome_fantasia", { ascending: true });
+          if (cancelled) return;
+          if (dbError) {
+            console.error(dbError);
+            setError("Não foi possível carregar os estabelecimentos agora. Tente novamente mais tarde.");
+          } else {
+            setItems(data || []);
+          }
+          setLoading(false);
+        }
+        load();
+        return () => { cancelled = true; };
+      }, []);
+
+      const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return items.filter(
+          (b) =>
+            (!city || b.cidade === city) &&
+            (!category || (b.categoria || "").toLowerCase() === category.toLowerCase()) &&
+            (!q || (b.nome_fantasia || "").toLowerCase().includes(q) || (b.descricao || "").toLowerCase().includes(q))
+        );
+      }, [items, query, category, city]);
+
+      const openLogin = () => { wantsRegister.current = false; setAuthReason(""); setAuthOpen(true); };
+      const openRegister = () => {
+        if (user) { setShowForm(true); return; }
+        wantsRegister.current = true;
+        setAuthReason("register");
+        setAuthOpen(true);
+      };
+      const closeAuth = () => { wantsRegister.current = false; setAuthOpen(false); };
+      const logout = async () => { if (sb) await sb.auth.signOut(); setUser(null); setShowForm(false); };
+
+      const scrollToResults = () =>
+        document.getElementById("destaques")?.scrollIntoView({ behavior: "smooth" });
+      const clearFilters = () => { setQuery(""); setCategory(""); setCity(""); };
+
+      return (
+        <div className="min-h-screen bg-white font-sans text-stone-800 antialiased">
+          <Header city={city} setCity={setCity} user={user} onRegister={openRegister} onLogin={openLogin} onLogout={logout} />
+          <main>
+            <Hero
+              query={query} setQuery={setQuery} category={category} setCategory={setCategory}
+              city={city} setCity={setCity} onSearch={scrollToResults}
+            />
+            <Categories active={category} setActive={setCategory} />
+            <div id="destaques">
+              <Featured items={filtered} loading={loading} error={error} onClear={clearFilters} onRegister={openRegister} />
+            </div>
+            <Agenda />
+            <CtaBusiness onRegister={openRegister} />
+          </main>
+          <Footer />
+          {authOpen && !user && <AuthModal onClose={closeAuth} reason={authReason} />}
+          {showForm && user && <RegisterModal user={user} onClose={() => setShowForm(false)} />}
+          {recovery && <NewPasswordModal onClose={() => setRecovery(false)} />}
+        </div>
+      );
+    }
 
     ReactDOM.createRoot(document.getElementById("root")).render(<GuiaRegionalPage />);
   </script>
