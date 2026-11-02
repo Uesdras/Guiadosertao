@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guia do Sertão - Comércio e Serviços Regionais</title>
+  <meta name="description" content="Guia comercial e de serviços de Macaúbas, Vitória da Conquista, Paramirim, Boquira e região." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useEffect, useMemo, useState } = React;
+
+    // Ícones SVG embutidos (sem dependência externa)
+    const ICON_PATHS = {
+      Search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></>,
+      MapPin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>,
+      Sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>,
+      Menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+      X: <path d="M18 6 6 18M6 6l12 12" />,
+      ChevronDown: <path d="m6 9 6 6 6-6" />,
+      Store: <><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /><path d="M22 7v3a2 2 0 0 1-2 2 2.7 2.7 0 0 1-2-.8 2.7 2.7 0 0 1-4 0 2.7 2.7 0 0 1-4 0 2.7 2.7 0 0 1-2 .8 2 2 0 0 1-2-2V7" /></>,
+      Utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></>,
+      HeartPulse: <><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" /></>,
+      Wrench: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
+      BedDouble: <><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8" /><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" /><path d="M12 4v6" /><path d="M2 18h20" /></>,
+      Briefcase: <><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>,
+      CalendarDays: <><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" /></>,
+      Music: <><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>,
+      Tent: <><path d="M3.5 21 14 3" /><path d="M20.5 21 10 3" /><path d="M15.5 21 12 15l-3.5 6" /><path d="M2 21h20" /></>,
+      ShoppingBasket: <><path d="m15 11-1 9" /><path d="m19 11-4-7" /><path d="M2 11h20" /><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" /><path d="M4.5 15.5h15" /><path d="m5 11 4-7" /><path d="m9 11 1 9" /></>,
+    };
+    const makeIcon = (name) => ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+        strokeLinejoin="round" className={className} aria-hidden="true">
+        {ICON_PATHS[name]}
+      </svg>
+    );
+    const Search = makeIcon("Search"), MapPin = makeIcon("MapPin"), Sun = makeIcon("Sun"),
+      Menu = makeIcon("Menu"), X = makeIcon("X"), ChevronDown = makeIcon("ChevronDown"),
+      Store = makeIcon("Store"), Utensils = makeIcon("Utensils"), HeartPulse = makeIcon("HeartPulse"),
+      Wrench = makeIcon("Wrench"), BedDouble = makeIcon("BedDouble"), Briefcase = makeIcon("Briefcase"),
+      CalendarDays = makeIcon("CalendarDays"), Music = makeIcon("Music"), Tent = makeIcon("Tent"),
+      ShoppingBasket = makeIcon("ShoppingBasket");
+
+
+
+/**
+ * Guia Comercial e de Serviços Regional – Sudoeste Baiano
+ * Single-file: cole em app/page.jsx (Next.js App Router) ou em src/App.jsx (Vite).
+
+ * Tailwind CSS v3 ou v4 já configurado no projeto.
+ *
+ * Observação: usa <img> comum (sem next/image) para funcionar sem configurar domínios.
+ * Todos os dados (negócios, telefones, eventos) são EXEMPLOS: troque pelos seus.
+ */
+
+
+
+
+/* ----------------------------- DADOS DE EXEMPLO ---------------------------- */
+
+const CITIES = ["Macaúbas", "Vitória da Conquista", "Paramirim", "Boquira"];
+
+const CATEGORIES = [
+  { id: "alimentacao", label: "Alimentação", icon: Utensils },
+  { id: "saude", label: "Saúde", icon: HeartPulse },
+  { id: "servicos", label: "Serviços", icon: Wrench },
+  { id: "hospedagem", label: "Hospedagem", icon: BedDouble },
+  { id: "vagas", label: "Vagas", icon: Briefcase },
+  { id: "eventos", label: "Eventos", icon: CalendarDays },
+];
+
+// hours: { dias da semana (0 = domingo) : [abre, fecha] em horas decimais } | null = fechado
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const mk = (days, open, close) =>
+  Object.fromEntries(days.map((d) => [d, [open, close]]));
+
+const BUSINESSES = [
+  {
+    id: 1,
+    name: "Restaurante Sabor do Sertão",
+    city: "Macaúbas",
+    category: "alimentacao",
+    phone: "5577999990001",
+    image:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=70",
+    hours: { ...mk([0, 6], 11, 15), ...mk(WEEKDAYS, 11, 22) },
+  },
+  {
+    id: 2,
+    name: "Clínica Vida & Saúde",
+    city: "Vitória da Conquista",
+    category: "saude",
+    phone: "5577999990002",
+    image:
+      "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=70",
+    hours: { ...mk(WEEKDAYS, 7, 18), ...mk([6], 8, 12) },
+  },
+  {
+    id: 3,
+    name: "Pousada Serra Azul",
+    city: "Paramirim",
+    category: "hospedagem",
+    phone: "5577999990003",
+    image:
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=70",
+    hours: mk([0, 1, 2, 3, 4, 5, 6], 0, 24),
+  },
+  {
+    id: 4,
+    name: "Eletro Mecânica Boquira",
+    city: "Boquira",
+    category: "servicos",
+    phone: "5577999990004",
+    image:
+      "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=800&q=70",
+    hours: { ...mk(WEEKDAYS, 7.5, 17.5), ...mk([6], 8, 12) },
+  },
+  {
+    id: 5,
+    name: "Padaria Pão Quente",
+    city: "Macaúbas",
+    category: "alimentacao",
+    phone: "5577999990005",
+    image:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=70",
+    hours: mk([0, 1, 2, 3, 4, 5, 6], 5.5, 19),
+  },
+  {
+    id: 6,
+    name: "Hotel Planalto Conquista",
+    city: "Vitória da Conquista",
+    category: "hospedagem",
+    phone: "5577999990006",
+    image:
+      "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=800&q=70",
+    hours: mk([0, 1, 2, 3, 4, 5, 6], 0, 24),
+  },
+  {
+    id: 7,
+    name: "Centro de Empregos Regional",
+    city: "Vitória da Conquista",
+    category: "vagas",
+    phone: "5577999990007",
+    image:
+      "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=70",
+    hours: mk(WEEKDAYS, 8, 17),
+  },
+  {
+    id: 8,
+    name: "Odonto Sorriso",
+    city: "Paramirim",
+    category: "saude",
+    phone: "5577999990008",
+    image:
+      "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=70",
+    hours: { ...mk(WEEKDAYS, 8, 18) },
+  },
+];
+
+const EVENTS = [
+  {
+    id: 1,
+    title: "Festa de Largo do Povoado",
+    city: "Macaúbas",
+    day: "14",
+    month: "NOV",
+    type: "Festa de largo",
+    icon: Tent,
+  },
+  {
+    id: 2,
+    title: "Show de Forró com Banda Regional",
+    city: "Vitória da Conquista",
+    day: "21",
+    month: "NOV",
+    type: "Show",
+    icon: Music,
+  },
+  {
+    id: 3,
+    title: "Feira da Agricultura Familiar",
+    city: "Paramirim",
+    day: "28",
+    month: "NOV",
+    type: "Feira",
+    icon: ShoppingBasket,
+  },
+  {
+    id: 4,
+    title: "Arraiá de Natal Boquirense",
+    city: "Boquira",
+    day: "12",
+    month: "DEZ",
+    type: "Festa",
+    icon: Music,
+  },
+];
+
+/* -------------------------------- HELPERS --------------------------------- */
+
+// Hora atual no fuso da Bahia (America/Bahia, UTC-3, sem horário de verão)
+function nowInBahia() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bahia",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  const dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    day: dayMap[get("weekday")],
+    hour: (parseInt(get("hour"), 10) % 24) + parseInt(get("minute"), 10) / 60,
+  };
+}
+
+function isOpenNow(hours, now) {
+  if (!now) return null; // ainda não calculado (evita erro de hidratação)
+  const range = hours[now.day];
+  if (!range) return false;
+  return now.hour >= range[0] && now.hour < range[1];
+}
+
+function whatsappLink(business) {
+  const msg = `Olá! Vi o *${business.name}* no Guia Regional e gostaria de mais informações.`;
+  return `https://wa.me/${business.phone}?text=${encodeURIComponent(msg)}`;
+}
+
+/* ------------------------------- COMPONENTES ------------------------------- */
+
+function WhatsAppIcon({ className = "h-5 w-5" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.04 2a9.9 9.9 0 0 0-8.43 15.1L2 22l5.04-1.58A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-2.99.94.97-2.91-.2-.31a8.2 8.2 0 1 1 6.7 3.6Zm4.5-6.14c-.25-.12-1.46-.72-1.68-.8-.23-.08-.4-.12-.56.12-.17.25-.64.8-.78.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.3-2.88c-.25-.43.25-.4.72-1.33.08-.16.04-.3-.02-.42-.06-.12-.56-1.35-.77-1.85-.2-.48-.4-.42-.56-.43h-.48c-.16 0-.43.06-.65.3-.23.25-.87.85-.87 2.07s.9 2.4 1.01 2.57c.12.16 1.75 2.67 4.24 3.75 1.58.68 2.2.74 3 .62.49-.07 1.46-.6 1.67-1.17.2-.58.2-1.07.14-1.17-.06-.1-.23-.16-.48-.28Z" />
+    </svg>
+  );
+}
+
+function Header({ city, setCity }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-blue-950/95 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+        {/* Logo */}
+        <a href="#" className="flex items-center gap-2">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400 text-blue-950 shadow-lg shadow-amber-400/20">
+            <Sun className="h-6 w-6" />
+          </span>
+          <span className="leading-tight">
+            <span className="block text-lg font-extrabold tracking-tight text-white">
+              Guia do Sertão
+            </span>
+            <span className="block text-[10px] font-medium uppercase tracking-widest text-amber-300">
+              Comércio &amp; Serviços
+            </span>
+          </span>
+        </a>
+
+        {/* Desktop */}
+        <div className="hidden items-center gap-3 md:flex">
+          <CitySelect city={city} setCity={setCity} />
+          <a
+            href="#cadastrar"
+            className="inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-2.5 text-sm font-bold text-blue-950 transition hover:bg-amber-300"
+          >
+            <Store className="h-4 w-4" />
+            Cadastrar meu Negócio
+          </a>
+        </div>
+
+        {/* Mobile toggle */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="rounded-lg p-2 text-white hover:bg-white/10 md:hidden"
+          aria-label="Abrir menu"
+        >
+          {open ? <X /> : <Menu />}
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      {open && (
+        <div className="space-y-3 border-t border-white/10 px-4 pb-4 pt-3 md:hidden">
+          <CitySelect city={city} setCity={setCity} full />
+          <a
+            href="#cadastrar"
+            className="flex items-center justify-center gap-2 rounded-full bg-amber-400 px-5 py-3 text-sm font-bold text-blue-950"
+          >
+            <Store className="h-4 w-4" />
+            Cadastrar meu Negócio
+          </a>
+        </div>
+      )}
+    </header>
+  );
+}
+
+function CitySelect({ city, setCity, full = false }) {
+  return (
+    <div className={`relative ${full ? "w-full" : ""}`}>
+      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-300" />
+      <select
+        value={city}
+        onChange={(e) => setCity(e.target.value)}
+        aria-label="Filtrar por cidade"
+        className="w-full appearance-none rounded-full border border-white/15 bg-blue-900 py-2.5 pl-9 pr-9 text-sm font-medium text-white outline-none transition hover:bg-blue-800 focus:ring-2 focus:ring-amber-400"
+      >
+        <option value="">Toda a região</option>
+        {CITIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
+    </div>
+  );
+}
+
+function Hero({ query, setQuery, category, setCategory, city, setCity, onSearch }) {
+  const fieldBase =
+    "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-amber-400";
+
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-blue-700 text-white">
+      {/* Sol do sertão */}
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-400/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
+
+      <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
+        <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-white/15">
+          <Sun className="h-3.5 w-3.5" /> Sudoeste baiano ao seu alcance
+        </span>
+
+        <h1 className="mt-5 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+          Tudo o que o <span className="text-amber-400">sertão</span> tem de
+          melhor, num só lugar.
+        </h1>
+        <p className="mt-4 max-w-2xl text-base text-blue-100 sm:text-lg">
+          Encontre comércios, serviços, vagas e eventos em Macaúbas, Vitória da
+          Conquista, Paramirim, Boquira e toda a microrregião.
+        </p>
+
+        {/* Busca */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSearch();
+          }}
+          className="mt-8 grid gap-3 rounded-2xl bg-white p-3 shadow-2xl shadow-blue-950/40 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_auto]"
+        >
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="O que você procura?"
+              className={`${fieldBase} pl-9`}
+            />
+          </div>
+
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className={fieldBase}
+            aria-label="Categoria"
+          >
+            <option value="">Todas as categorias</option>
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className={fieldBase}
+            aria-label="Cidade"
+          >
+            <option value="">Toda a região</option>
+            {CITIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3 text-sm font-bold text-blue-950 transition hover:bg-amber-300 sm:col-span-2 lg:col-span-1"
+          >
+            <Search className="h-4 w-4" />
+            Buscar
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+}
+
+function Categories({ active, setActive }) {
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-10">
+      <h2 className="text-xl font-extrabold text-blue-950 sm:text-2xl">
+        Navegue por categoria
+      </h2>
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {CATEGORIES.map(({ id, label, icon: Icon }) => {
+          const selected = active === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setActive(selected ? "" : id)}
+              className={`group flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-semibold transition ${
+                selected
+                  ? "border-amber-400 bg-blue-950 text-white shadow-lg"
+                  : "border-slate-200 bg-white text-blue-950 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md"
+              }`}
+            >
+              <span
+                className={`grid h-12 w-12 place-items-center rounded-xl transition ${
+                  selected
+                    ? "bg-amber-400 text-blue-950"
+                    : "bg-blue-50 text-blue-800 group-hover:bg-amber-100"
+                }`}
+              >
+                <Icon className="h-6 w-6" />
+              </span>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function StatusBadge({ open }) {
+  if (open === null) {
+    return <span className="h-6 w-24 animate-pulse rounded-full bg-slate-200" />;
+  }
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+        open
+          ? "bg-emerald-100 text-emerald-700"
+          : "bg-rose-100 text-rose-700"
+      }`}
+    >
+      <span
+        className={`h-2 w-2 rounded-full ${
+          open ? "animate-pulse bg-emerald-500" : "bg-rose-500"
+        }`}
+      />
+      {open ? "Aberto Agora" : "Fechado"}
+    </span>
+  );
+}
+
+function BusinessCard({ business, now }) {
+  const open = isOpenNow(business.hours, now);
+  const cat = CATEGORIES.find((c) => c.id === business.category);
+
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative aspect-[16/10] overflow-hidden bg-slate-200">
+        <img
+          src={business.image}
+          alt={business.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        />
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-blue-950/90 px-2.5 py-1 text-xs font-semibold text-amber-300 backdrop-blur">
+          <MapPin className="h-3 w-3" />
+          {business.city} - BA
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {cat?.label}
+          </span>
+          <StatusBadge open={open} />
+        </div>
+
+        <h3 className="text-lg font-bold leading-snug text-blue-950">
+          {business.name}
+        </h3>
+
+        <a
+          href={whatsappLink(business)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1ebe5b] focus:outline-none focus:ring-2 focus:ring-[#25D366] focus:ring-offset-2"
+        >
+          <WhatsAppIcon />
+          Chamar no WhatsApp
+        </a>
+      </div>
+    </article>
+  );
+}
+
+function Featured({ items, now, onClear }) {
+  return (
+    <section className="bg-slate-50 py-12">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-extrabold text-blue-950 sm:text-2xl">
+              Estabelecimentos em destaque
+            </h2>
+            <p className="text-sm text-slate-500">
+              {items.length} resultado{items.length !== 1 && "s"} encontrado
+              {items.length !== 1 && "s"}
+            </p>
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+            <p className="font-semibold text-blue-950">
+              Nenhum estabelecimento encontrado.
+            </p>
+            <button
+              onClick={onClear}
+              className="mt-3 rounded-full bg-blue-950 px-5 py-2 text-sm font-bold text-white hover:bg-blue-900"
+            >
+              Limpar filtros
+            </button>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {items.map((b) => (
+              <BusinessCard key={b.id} business={b} now={now} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Agenda() {
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-12">
+      <div className="flex items-center gap-2">
+        <CalendarDays className="h-6 w-6 text-amber-500" />
+        <h2 className="text-xl font-extrabold text-blue-950 sm:text-2xl">
+          Agenda Cultural
+        </h2>
+      </div>
+
+      <ul className="mt-6 grid gap-3 md:grid-cols-2">
+        {EVENTS.map(({ id, title, city, day, month, type, icon: Icon }) => (
+          <li
+            key={id}
+            className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-amber-400 hover:shadow-md"
+          >
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-xl bg-blue-950 text-center text-white">
+              <div>
+                <div className="text-xl font-extrabold leading-none text-amber-400">
+                  {day}
+                </div>
+                <div className="text-[10px] font-bold tracking-widest">
+                  {month}
+                </div>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate font-bold text-blue-950">{title}</h3>
+              <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
+                <MapPin className="h-3.5 w-3.5" /> {city} - BA
+              </p>
+            </div>
+            <span className="hidden items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 sm:inline-flex">
+              <Icon className="h-3.5 w-3.5" />
+              {type}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function CtaBusiness() {
+  return (
+    <section id="cadastrar" className="px-4 pb-14">
+      <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 to-blue-700 p-8 text-center text-white sm:p-12">
+        <Store className="mx-auto h-10 w-10 text-amber-400" />
+        <h2 className="mt-3 text-2xl font-extrabold sm:text-3xl">
+          Seu negócio merece ser encontrado
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-blue-100">
+          Cadastre sua empresa no guia e receba clientes direto no WhatsApp.
+        </p>
+        <a
+          href="https://wa.me/5577999990000?text=Ol%C3%A1!%20Quero%20cadastrar%20meu%20neg%C3%B3cio%20no%20Guia%20do%20Sert%C3%A3o."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-amber-400 px-7 py-3 font-bold text-blue-950 transition hover:bg-amber-300"
+        >
+          <WhatsAppIcon className="h-5 w-5" />
+          Quero cadastrar
+        </a>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-white/10 bg-blue-950 py-8 text-center text-sm text-blue-200">
+      <div className="mx-auto max-w-6xl px-4">
+        <p className="flex items-center justify-center gap-2 font-bold text-white">
+          <Sun className="h-4 w-4 text-amber-400" /> Guia do Sertão
+        </p>
+        <p className="mt-1">
+          Macaúbas · Vitória da Conquista · Paramirim · Boquira · Bahia
+        </p>
+        <p className="mt-3 text-xs text-blue-300">
+          © {new Date().getFullYear()} Guia do Sertão. Todos os direitos
+          reservados.
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+/* --------------------------------- PÁGINA --------------------------------- */
+
+function GuiaRegionalPage() {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const [city, setCity] = useState("");
+  const [now, setNow] = useState(null);
+
+  // Atualiza o "Aberto Agora" a cada minuto (apenas no cliente)
+  useEffect(() => {
+    setNow(nowInBahia());
+    const t = setInterval(() => setNow(nowInBahia()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return BUSINESSES.filter(
+      (b) =>
+        (!city || b.city === city) &&
+        (!category || b.category === category) &&
+        (!q || b.name.toLowerCase().includes(q))
+    );
+  }, [query, category, city]);
+
+  const scrollToResults = () =>
+    document.getElementById("destaques")?.scrollIntoView({ behavior: "smooth" });
+
+  const clearFilters = () => {
+    setQuery("");
+    setCategory("");
+    setCity("");
+  };
+
+  return (
+    <div className="min-h-screen bg-white font-sans text-slate-800 antialiased">
+      <Header city={city} setCity={setCity} />
+      <main>
+        <Hero
+          query={query}
+          setQuery={setQuery}
+          category={category}
+          setCategory={setCategory}
+          city={city}
+          setCity={setCity}
+          onSearch={scrollToResults}
+        />
+        <Categories active={category} setActive={setCategory} />
+        <div id="destaques">
+          <Featured items={filtered} now={now} onClear={clearFilters} />
+        </div>
+        <Agenda />
+        <CtaBusiness />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<GuiaRegionalPage />);
+  </script>
+</body>
+</html>
